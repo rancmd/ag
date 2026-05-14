@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Art Gem — Store</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { background: var(--bg); overflow: hidden; }
+
+    #store-page {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    /* ---- Top Bar ---- */
+    .store-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: max(env(safe-area-inset-top,12px),12px) 16px 12px;
+      background: var(--bg);
+      z-index: 10;
+    }
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--purple);
+      cursor: pointer;
+    }
+    .basket-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      position: relative;
+    }
+    .basket-count {
+      position: absolute;
+      top: -6px; right: -8px;
+      width: 18px; height: 18px;
+      background: var(--purple);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.65rem;
+      font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ---- Filter chips ---- */
+    .store-filters {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 16px 12px;
+    }
+    .store-filters::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: all 0.2s;
+    }
+    .filter-chip.active {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: #fff;
+    }
+
+    /* ---- Store Scroll ---- */
+    .store-scroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding: 0 12px 90px;
+    }
+    .store-scroll::-webkit-scrollbar { display: none; }
+
+    /* ---- Grid ---- */
+    .store-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ---- Store Card ---- */
+    .store-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .store-card:active { transform: scale(0.97); box-shadow: var(--shadow-md); }
+
+    .store-thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: var(--purple-pale);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5rem;
+      position: relative;
+    }
+    .sold-badge {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 50px;
+      letter-spacing: 0.04em;
+    }
+    .available-dot {
+      position: absolute;
+      top: 10px; left: 10px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4CAF50;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+    }
+
+    .store-info {
+      padding: 10px 12px 12px;
+    }
+    .store-artist {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 3px;
+    }
+    .store-title {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 2px;
+      line-height: 1.2;
+    }
+    .store-medium {
+      font-size: 0.72rem;
+      color: var(--text-light);
+      margin-bottom: 8px;
+    }
+    .store-price-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .store-price {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+      font-family: var(--font-body);
+    }
+    .store-add {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--yellow);
+      border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      font-size: 1.1rem;
+    }
+    .store-add:active { transform: scale(0.88); background: var(--yellow-deep); }
+
+    /* ---- Section label ---- */
+    .store-section-label {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      color: var(--text);
+      padding: 16px 4px 10px;
+    }
+
+    /* ---- Piece Detail Sheet ---- */
+    .piece-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .piece-sheet.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .piece-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+    }
+    .piece-panel {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: var(--bg);
+      border-radius: 24px 24px 0 0;
+      padding: 0 0 env(safe-area-inset-bottom, 20px);
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+      max-height: 92dvh;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .piece-panel::-webkit-scrollbar { display: none; }
+    .piece-sheet.open .piece-panel { transform: translateY(0); }
+
+    .piece-drag-handle {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 0;
+    }
+    .piece-image-large {
+      width: calc(100% - 32px);
+      margin: 16px 16px 0;
+      aspect-ratio: 1;
+      border-radius: var(--radius-md);
+      background: var(--purple-pale);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 6rem;
+      overflow: hidden;
+    }
+    .piece-detail-body {
+      padding: 20px 20px 24px;
+    }
+    .piece-artist-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .piece-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .piece-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .piece-desc {
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .piece-specs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .spec-item {
+      background: var(--purple-pale);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .spec-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .spec-value {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .piece-buy-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .piece-price-big {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      color: var(--text);
+    }
+
+    /* ---- Bottom Nav ---- */
+    .bottom-nav-light {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 430px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 10px 0 calc(10px + env(safe-area-inset-bottom,0px));
+      background: rgba(249,248,246,0.92);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      z-index: 50;
+    }
+    .nav-item-light {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px 16px;
+    }
+    .nav-item-light svg { color: var(--text-light); }
+    .nav-item-light.active svg { color: var(--purple); }
+    .nav-item-light .nav-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text-light);
+      font-family: var(--font-body);
+    }
+    .nav-item-light.active .nav-label { color: var(--purple); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="store-page">
+
+    <!-- Top Bar -->
+    <div class="store-topbar">
+      <button class="back-btn" onclick="window.location.href='profile.html'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+        Profile
+      </button>
+      <span style="font-family:var(--font-display);font-size:1rem;">The Store</span>
+      <button class="basket-btn" onclick="showToast('Basket coming soon 🛒')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 01-8 0"/>
+        </svg>
+        <span class="basket-count" id="basketCount">0</span>
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="store-filters">
+      <button class="filter-chip active" onclick="filterStore(this,'all')">All Works</button>
+      <button class="filter-chip" onclick="filterStore(this,'ink')">Ink & Wash</button>
+      <button class="filter-chip" onclick="filterStore(this,'watercolour')">Watercolour</button>
+      <button class="filter-chip" onclick="filterStore(this,'gouache')">Gouache</button>
+      <button class="filter-chip" onclick="filterStore(this,'marker')">Marker</button>
+      <button class="filter-chip" onclick="filterStore(this,'available')">Available</button>
+    </div>
+
+    <!-- Store Grid -->
+    <div class="store-scroll">
+
+      <div class="store-section-label">Chommang</div>
+      <div class="store-grid">
+
+        <div class="store-card" onclick="openPiece('morning-fog')">
+          <div class="store-thumb">
+            🌊
+            <div class="available-dot"></div>
+          </div>
+          <div class="store-info">
+            <div class="store-artist">Chommang</div>
+            <div class="store-title">Morning Fog</div>
+            <div class="store-medium">Ink & Wash on Paper · A3</div>
+            <div class="store-price-row">
+              <span class="store-price">£280</span>
+              <button class="store-add" onclick="event.stopPropagation();addToBasket('Morning Fog')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="store-card" onclick="openPiece('night-study')">
+          <div class="store-thumb" style="background:#1A1A2A;font-size:3.5rem;">🌙</div>
+          <div class="store-info">
+            <div class="store-artist">Chommang</div>
+            <div class="store-title">Night Study II</div>
+            <div class="store-medium">Sumi Ink on Paper · A4</div>
+            <div class="store-price-row">
+              <span class="store-price">£145</span>
+              <button class="store-add" onclick="event.stopPropagation();addToBasket('Night Study II')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="store-card" onclick="openPiece('river-run')">
+          <div class="store-thumb" style="background:#E8F5E8;">🍃</div>
+          <div class="store-info">
+            <div class="store-artist">Chommang</div>
+            <div class="store-title">River Run</div>
+            <div class="store-medium">Ink & Wash · A2</div>
+            <div class="store-price-row">
+              <span class="store-price">£320</span>
+              <button class="store-add" onclick="event.stopPropagation();addToBasket('River Run')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="store-card" onclick="openPiece('stone-garden')">
+          <div class="store-thumb" style="background:#F0EDE8;">🪨
+            <div class="sold-badge">SOLD</div>
+          </div>
+          <div class="store-info">
+            <div class="store-artist">Chommang</div>
+            <div class="store-title">Stone Garden</div>
+            <div class="store-medium">Sumi Ink · A3</div>
+            <div class="store-price-row">
+              <span class="store-price" style="color:var(--text-light);">£195</span>
+              <button class="store-add" style="background:var(--border);opacity:0.5" onclick="event.stopPropagation();showToast('This piece has sold')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="store-section-label">Miya Tanaka</div>
+      <div class="store-grid">
+
+        <div class="store-card" onclick="openPiece('pink-study')">
+          <div class="store-thumb" style="background:#FFE8F0;">🌸
+            <div class="available-dot"></div>
+          </div>
+          <div class="store-info">
+            <div class="store-artist">Miya Tanaka</div>
+            <div class="store-title">Pink Study No.1</div>
+            <div class="store-medium">Watercolour · A5</div>
+            <div class="store-price-row">
+              <span class="store-price">£45</span>
+              <button class="store-add" onclick="event.stopPropagation();addToBasket('Pink Study')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="store-card" onclick="openPiece('garden-path')">
+          <div class="store-thumb" style="background:#E8F5E8;">🌿
+            <div class="available-dot"></div>
+          </div>
+          <div class="store-info">
+            <div class="store-artist">Miya Tanaka</div>
+            <div class="store-title">Garden Path</div>
+            <div class="store-medium">Watercolour · A4</div>
+            <div class="store-price-row">
+              <span class="store-price">£65</span>
+              <button class="store-add" onclick="event.stopPropagation();addToBasket('Garden Path')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="store-section-label">Drewscape</div>
+      <div class="store-grid">
+
+        <div class="store-card" onclick="openPiece('urban-corner')">
+          <div class="store-thumb" style="background:#F0F0F8;">🏙
+            <div class="available-dot"></div>
+          </div>
+          <div class="store-info">
+            <div class="store-artist">Drewscape</div>
+            <div class="store-title">Urban Corner</div>
+            <div class="store-medium">Marker & Ink · A3</div>
+            <div class="store-price-row">
+              <span class="store-price">£210</span>
+              <button class="store-add" onclick="event.stopPropagation();addToBasket('Urban Corner')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="store-card" onclick="openPiece('cafe-study')">
+          <div class="store-thumb" style="background:#FFF8E8;">☕
+            <div class="available-dot"></div>
+          </div>
+          <div class="store-info">
+            <div class="store-artist">Drewscape</div>
+            <div class="store-title">Café Study</div>
+            <div class="store-medium">Pen & Ink · A5</div>
+            <div class="store-price-row">
+              <span class="store-price">£95</span>
+              <button class="store-add" onclick="event.stopPropagation();addToBasket('Café Study')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- /store-scroll -->
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav-light">
+      <button class="nav-item-light" onclick="window.location.href='menu.html'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span class="nav-label">YOU</span>
+      </button>
+      <button class="nav-item-light" onclick="window.location.href='feed.html'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span class="nav-label">FOLLOW</span>
+      </button>
+      <button class="nav-item-light" onclick="window.location.href='feed.html'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <span class="nav-label">DISCOVER</span>
+      </button>
+      <button class="nav-item-light active">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 01-8 0"/>
+        </svg>
+        <span class="nav-label">STORE</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Piece Detail Sheet -->
+  <div class="piece-sheet" id="pieceSheet">
+    <div class="piece-overlay" onclick="closePiece()"></div>
+    <div class="piece-panel" id="piecePanel">
+      <div class="piece-drag-handle"></div>
+      <div class="piece-image-large" id="pieceImage">🌊</div>
+      <div class="piece-detail-body">
+        <div class="piece-artist-row">
+          <div class="avatar avatar-sm" style="background:var(--purple-pale);color:var(--purple);" id="pieceArtistAvatar">C</div>
+          <span style="font-size:0.82rem;font-weight:700;color:var(--text-muted);" id="pieceArtistName">Chommang</span>
+        </div>
+        <div class="piece-title" id="pieceTitle">Morning Fog</div>
+        <div class="piece-meta" id="pieceMeta">Ink & Wash on Paper · A3 · 2025</div>
+        <p class="piece-desc" id="pieceDesc">A quiet study in atmosphere — three layers of wash, built slowly over four hours. The fog was unplanned. It arrived on its own.</p>
+        <div class="piece-specs">
+          <div class="spec-item">
+            <div class="spec-label">Size</div>
+            <div class="spec-value" id="pieceSize">42 × 30 cm</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">Medium</div>
+            <div class="spec-value" id="pieceMedium">Ink & Wash</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">Paper</div>
+            <div class="spec-value" id="piecePaper">300gsm Cold Press</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">Ships in</div>
+            <div class="spec-value">5–7 days</div>
+          </div>
+        </div>
+        <div class="piece-buy-row">
+          <div class="piece-price-big" id="piecePriceBig">£280</div>
+          <button class="btn btn-primary" style="flex:1;max-width:200px;" id="pieceAddBtn" onclick="addToBasketFromSheet()">
+            Add to Basket
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+  let basketCount = 0;
+
+  const pieces = {
+    'morning-fog': {
+      emoji:'🌊', title:'Morning Fog', artist:'Chommang', artistAvatar:'C',
+      meta:'Ink & Wash on Paper · A3 · 2025',
+      desc:'A quiet study in atmosphere — three layers of wash, built slowly over four hours. The fog arrived on its own.',
+      size:'42 × 30 cm', medium:'Ink & Wash', paper:'300gsm Cold Press', price:'£280'
+    },
+    'night-study': {
+      emoji:'🌙', title:'Night Study II', artist:'Chommang', artistAvatar:'C',
+      meta:'Sumi Ink on Paper · A4 · 2025',
+      desc:'Second in a series of night studies. Exploring how little ink you need to describe darkness.',
+      size:'29 × 21 cm', medium:'Sumi Ink', paper:'200gsm Smooth', price:'£145'
+    },
+    'river-run': {
+      emoji:'🍃', title:'River Run', artist:'Chommang', artistAvatar:'C',
+      meta:'Ink & Wash · A2 · 2024',
+      desc:'Large format piece. The river came from memory — a walk taken without a camera. Only a brush survived.',
+      size:'59 × 42 cm', medium:'Ink & Wash', paper:'300gsm Cold Press', price:'£320'
+    },
+    'stone-garden': {
+      emoji:'🪨', title:'Stone Garden', artist:'Chommang', artistAvatar:'C',
+      meta:'Sumi Ink · A3 · 2024 · SOLD',
+      desc:'Inspired by a Kyoto garden visit. Minimal marks, maximum space.',
+      size:'42 × 30 cm', medium:'Sumi Ink', paper:'Washi', price:'£195 (SOLD)'
+    },
+    'pink-study': {
+      emoji:'🌸', title:'Pink Study No.1', artist:'Miya Tanaka', artistAvatar:'M',
+      meta:'Watercolour · A5 · 2026',
+      desc:'My first piece that felt finished. Spent 3 hours on this small square and it taught me more than 30 hours of practice.',
+      size:'15 × 21 cm', medium:'Watercolour', paper:'140gsm Cold Press', price:'£45'
+    },
+    'garden-path': {
+      emoji:'🌿', title:'Garden Path', artist:'Miya Tanaka', artistAvatar:'M',
+      meta:'Watercolour · A4 · 2026',
+      desc:'The path through my grandmother\'s garden. Painted from memory after she moved away.',
+      size:'21 × 29 cm', medium:'Watercolour', paper:'200gsm Hot Press', price:'£65'
+    },
+    'urban-corner': {
+      emoji:'🏙', title:'Urban Corner', artist:'Drewscape', artistAvatar:'D',
+      meta:'Marker & Ink · A3 · 2025',
+      desc:'Sketched on-location in 40 minutes, Singapore. Coloured back in the studio. The corner is still there.',
+      size:'42 × 30 cm', medium:'Marker & Ink', paper:'Cartridge', price:'£210'
+    },
+    'cafe-study': {
+      emoji:'☕', title:'Café Study', artist:'Drewscape', artistAvatar:'D',
+      meta:'Pen & Ink · A5 · 2025',
+      desc:'A quick study from a regular café. Pen only. No pencil lines first.',
+      size:'15 × 21 cm', medium:'Pen & Ink', paper:'Smooth 160gsm', price:'£95'
+    },
+  };
+
+  function openPiece(id) {
+    const p = pieces[id];
+    if (!p) return;
+    document.getElementById('pieceImage').textContent = p.emoji;
+    document.getElementById('pieceTitle').textContent = p.title;
+    document.getElementById('pieceArtistAvatar').textContent = p.artistAvatar;
+    document.getElementById('pieceArtistName').textContent = p.artist;
+    document.getElementById('pieceMeta').textContent = p.meta;
+    document.getElementById('pieceDesc').textContent = p.desc;
+    document.getElementById('pieceSize').textContent = p.size;
+    document.getElementById('pieceMedium').textContent = p.medium;
+    document.getElementById('piecePaper').textContent = p.paper;
+    document.getElementById('piecePriceBig').textContent = p.price;
+    document.getElementById('pieceAddBtn').dataset.name = p.title;
+    document.getElementById('pieceSheet').classList.add('open');
+  }
+
+  function closePiece() {
+    document.getElementById('pieceSheet').classList.remove('open');
+  }
+
+  function addToBasketFromSheet() {
+    const name = document.getElementById('pieceAddBtn').dataset.name;
+    addToBasket(name);
+    closePiece();
+  }
+
+  function addToBasket(name) {
+    basketCount++;
+    document.getElementById('basketCount').textContent = basketCount;
+    showToast('🛒 ' + name + ' added to basket');
+  }
+
+  function filterStore(btn, type) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    showToast('Filtering by: ' + btn.textContent);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // Swipe to close sheet
+  let sy = 0;
+  document.getElementById('piecePanel').addEventListener('touchstart', e => { sy = e.touches[0].clientY; }, { passive:true });
+  document.getElementById('piecePanel').addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientY - sy > 80) closePiece();
+  }, { passive:true });
+
+  // Check if opened from profile with a piece param
+  const urlParams = new URLSearchParams(window.location.search);
+  const piece = urlParams.get('piece');
+  if (piece) { setTimeout(() => openPiece(piece), 300); }
+</script>
+</body>
+</html>

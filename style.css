@@ -1,0 +1,254 @@
+/* ============================================
+   ART GEM — style.css
+   Design System & Global Styles
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ---- CSS Variables ---- */
+:root {
+  --bg:           #F9F8F6;
+  --bg-card:      #FFFFFF;
+  --purple:       #A083D5;
+  --purple-deep:  #7B5EA7;
+  --purple-light: #B19CD8;
+  --purple-pale:  #EDE8F8;
+  --yellow:       #F4E064;
+  --yellow-deep:  #EFCF20;
+  --text:         #1A1A1A;
+  --text-muted:   #7A7A7A;
+  --text-light:   #B0B0B0;
+  --border:       #EBEBEB;
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.06);
+  --shadow-md:    0 8px 24px rgba(0,0,0,0.10);
+  --radius-sm:    10px;
+  --radius-md:    18px;
+  --radius-lg:    28px;
+  --font-display: 'DM Serif Display', serif;
+  --font-body:    'DM Sans', sans-serif;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: var(--font-body);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
+}
+
+/* ---- App Shell ---- */
+.app-shell {
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ---- Page Transitions ---- */
+.page {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: var(--bg);
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.38s ease;
+  will-change: transform;
+}
+
+.page.active   { transform: translateX(0);     opacity: 1;   pointer-events: all; }
+.page.left     { transform: translateX(-100%); opacity: 0.4; pointer-events: none; }
+.page.right    { transform: translateX(100%);  opacity: 0.4; pointer-events: none; }
+.page.hidden   { transform: translateX(100%);  opacity: 0;   pointer-events: none; }
+
+/* ---- Typography ---- */
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
+h1 { font-size: 2rem; line-height: 1.15; }
+h2 { font-size: 1.4rem; line-height: 1.2; }
+h3 { font-size: 1.1rem; }
+
+p  { font-size: 0.875rem; line-height: 1.6; color: var(--text-muted); }
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 50px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+}
+.btn:active { transform: scale(0.95); }
+
+.btn-primary {
+  background: var(--purple);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(160,131,213,0.35);
+}
+.btn-primary:active { box-shadow: 0 2px 6px rgba(160,131,213,0.2); }
+
+.btn-yellow {
+  background: var(--yellow);
+  color: var(--text);
+  box-shadow: 0 4px 14px rgba(244,224,100,0.4);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 8px 12px;
+}
+
+/* ---- Icon Button ---- */
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  font-size: 1.1rem;
+  transition: background 0.2s, transform 0.15s;
+}
+.icon-btn:active { transform: scale(0.9); }
+.icon-btn.dark {
+  background: rgba(26,26,26,0.08);
+  color: var(--text);
+}
+
+/* ---- Pill Tag ---- */
+.tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.tag-purple { background: var(--purple-pale); color: var(--purple-deep); }
+.tag-yellow { background: #FFF8CC; color: #9A7A00; }
+
+/* ---- Avatar ---- */
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--purple-pale);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--purple);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.avatar-sm  { width: 36px; height: 36px; }
+.avatar-md  { width: 56px; height: 56px; font-size: 1.4rem; }
+.avatar-lg  { width: 80px; height: 80px; font-size: 2rem; }
+.avatar-xl  { width: 96px; height: 96px; font-size: 2.4rem; }
+
+/* ---- Divider ---- */
+.divider {
+  width: 100%; height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* ---- Scrollable container ---- */
+.scroll-y {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll-y::-webkit-scrollbar { display: none; }
+
+/* ---- Section Header ---- */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  margin-bottom: 12px;
+}
+.section-header h3 { font-family: var(--font-display); font-size: 1.1rem; }
+.section-header a  {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--purple);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+/* ---- Bottom Safe Area ---- */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+
+/* ---- Animations ---- */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.fade-up { animation: fadeUp 0.4s ease both; }
+.fade-in { animation: fadeIn 0.3s ease both; }
+
+/* ---- Toast ---- */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%; transform: translateX(-50%);
+  background: var(--text);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 50px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, bottom 0.3s;
+  z-index: 999;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; bottom: 100px; }
+
+/* ---- Overlay ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.overlay.show { opacity: 1; pointer-events: all; }

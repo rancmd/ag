@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Art Gem" />
+  <meta name="theme-color" content="#F9F8F6" />
+  <title>Art Gem — Feed</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ---- Feed Page ---- */
+    #feed-page {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      background: #0D0D0D;
+      position: relative;
+    }
+
+    /* ---- Search Bar ---- */
+    .search-bar-wrap {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 30;
+      padding: 52px 16px 12px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%);
+      transform: translateY(-100%);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      pointer-events: none;
+    }
+    .search-bar-wrap.visible {
+      transform: translateY(0);
+      pointer-events: all;
+    }
+    .search-input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+      border-radius: 50px;
+      padding: 10px 16px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .search-input-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: #fff;
+    }
+    .search-input-row input::placeholder { color: rgba(255,255,255,0.5); }
+    .search-input-row svg { color: rgba(255,255,255,0.6); flex-shrink: 0; }
+    .search-chips {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .search-chips::-webkit-scrollbar { display: none; }
+    .search-chip {
+      flex-shrink: 0;
+      padding: 5px 14px;
+      border-radius: 50px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.8);
+      font-size: 0.75rem;
+      font-family: var(--font-body);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .search-chip.active,
+    .search-chip:active {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: #fff;
+    }
+
+    /* ---- Top HUD ---- */
+    .feed-hud {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: env(safe-area-inset-top, 12px) 16px 0;
+      padding-top: max(env(safe-area-inset-top, 12px), 12px);
+    }
+
+    /* ---- Tabs ---- */
+    .feed-tabs {
+      display: flex;
+      gap: 20px;
+      position: absolute;
+      top: max(env(safe-area-inset-top, 12px), 12px);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .feed-tab {
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.5);
+      cursor: pointer;
+      padding: 8px 4px;
+      position: relative;
+      background: none;
+      border: none;
+      transition: color 0.2s;
+      letter-spacing: 0.01em;
+    }
+    .feed-tab::after {
+      content: '';
+      position: absolute;
+      bottom: 2px; left: 0; right: 0;
+      height: 2px;
+      border-radius: 2px;
+      background: #fff;
+      transform: scaleX(0);
+      transition: transform 0.25s ease;
+    }
+    .feed-tab.active { color: #fff; }
+    .feed-tab.active::after { transform: scaleX(1); }
+
+    /* ---- Speed Badge ---- */
+    .speed-badge {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50px;
+      padding: 5px 11px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--font-body);
+      cursor: pointer;
+      letter-spacing: 0.02em;
+    }
+
+    /* ---- Video Feed ---- */
+    .video-feed {
+      flex: 1;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+      position: relative;
+    }
+    .video-feed::-webkit-scrollbar { display: none; }
+
+    /* ---- Video Slide ---- */
+    .video-slide {
+      width: 100%;
+      height: 100dvh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      position: relative;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ---- Embedded Video ---- */
+    .video-embed {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+      border: none;
+      display: block;
+    }
+
+    /* ---- Video Overlay (gradient + info) ---- */
+    .video-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(
+        to bottom,
+        transparent 35%,
+        rgba(0,0,0,0.15) 65%,
+        rgba(0,0,0,0.75) 100%
+      );
+      z-index: 5;
+    }
+
+    /* ---- Swipe hint ---- */
+    .swipe-hint {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      pointer-events: none;
+      animation: fadeIn 0.5s 1.5s both;
+    }
+    .swipe-hint span {
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.5);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+    }
+    .swipe-arrow {
+      width: 24px; height: 24px;
+      border-right: 2px solid rgba(255,255,255,0.4);
+      border-top: 2px solid rgba(255,255,255,0.4);
+      transform: rotate(45deg);
+      animation: pulse 2s infinite;
+    }
+
+    /* ---- Artist Info (bottom of video) ---- */
+    .artist-info {
+      position: absolute;
+      bottom: 0; left: 0; right: 72px;
+      padding: 20px 20px 32px;
+      z-index: 10;
+      pointer-events: all;
+    }
+    .artist-info-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .artist-info-row .avatar {
+      border: 2px solid rgba(255,255,255,0.4);
+    }
+    .artist-name {
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.01em;
+    }
+    .artist-handle {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.6);
+    }
+    .video-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      color: #fff;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .video-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .video-tag {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.7);
+      font-weight: 500;
+    }
+    .video-tag::before { content: '#'; }
+
+    /* ---- Side Actions ---- */
+    .side-actions {
+      position: absolute;
+      right: 16px;
+      bottom: 28px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .action-btn .icon-wrap {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .action-btn:active .icon-wrap { transform: scale(0.88); }
+    .action-btn.liked .icon-wrap { background: rgba(244,224,100,0.25); }
+    .action-btn svg { color: #fff; }
+    .action-btn.liked svg.heart { color: var(--yellow); }
+    .action-count {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.8);
+      font-family: var(--font-body);
+    }
+
+    /* ---- Bottom Nav ---- */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 430px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px));
+      background: rgba(13,13,13,0.85);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      z-index: 50;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-item svg { color: rgba(255,255,255,0.35); transition: color 0.2s; }
+    .nav-item.active svg { color: var(--yellow); }
+    .nav-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: rgba(255,255,255,0.35);
+      font-family: var(--font-body);
+      transition: color 0.2s;
+    }
+    .nav-item.active .nav-label { color: var(--yellow); }
+
+    /* ---- Swipe gesture overlay ---- */
+    #swipe-detector {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      pointer-events: all;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ============ FEED PAGE ============ -->
+  <div id="feed-page">
+
+    <!-- Search Bar (pull down) -->
+    <div class="search-bar-wrap" id="searchBar">
+      <div class="search-input-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" placeholder="Search artists, styles, mediums…" />
+        <svg id="searchClose" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="cursor:pointer">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </div>
+      <div class="search-chips">
+        <button class="search-chip active">All</button>
+        <button class="search-chip">Watercolour</button>
+        <button class="search-chip">Oil Paint</button>
+        <button class="search-chip">Charcoal</button>
+        <button class="search-chip">Sketch</button>
+        <button class="search-chip">Ceramics</button>
+        <button class="search-chip">Printmaking</button>
+        <button class="search-chip">Calligraphy</button>
+      </div>
+    </div>
+
+    <!-- HUD: Menu | Tabs | Speed -->
+    <div class="feed-hud">
+      <button class="icon-btn" id="menuBtn" onclick="window.location.href='menu.html'" aria-label="Menu">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M4 6h16M4 12h16M4 18h10"/>
+        </svg>
+      </button>
+
+      <div class="feed-tabs">
+        <button class="feed-tab" id="tabFollow" onclick="switchTab('follow')">Follow</button>
+        <button class="feed-tab active" id="tabDiscover" onclick="switchTab('discover')">Discover</button>
+      </div>
+
+      <div class="speed-badge">× 1</div>
+    </div>
+
+    <!-- Video Feed -->
+    <div class="video-feed" id="videoFeed">
+
+      <!-- Slide 1 -->
+      <div class="video-slide" data-artist="chommang" data-index="0">
+        <iframe class="video-embed"
+          src="https://www.youtube.com/embed/4aeeQsaP2uk?autoplay=1&loop=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+          loading="lazy">
+        </iframe>
+        <div class="video-overlay"></div>
+        <div id="swipe-detector-0" class="swipe-detector"></div>
+
+        <div class="artist-info">
+          <div class="artist-info-row" onclick="goToProfile('chommang')">
+            <div class="avatar avatar-sm" style="background:#2A1A4A;color:#B19CD8;">C</div>
+            <div>
+              <div class="artist-name">Chommang</div>
+              <div class="artist-handle">@chommang</div>
+            </div>
+          </div>
+          <div class="video-title">Ink & wash — late night study</div>
+          <div class="video-tags">
+            <span class="video-tag">ink</span>
+            <span class="video-tag">wash</span>
+            <span class="video-tag">process</span>
+          </div>
+        </div>
+
+        <div class="side-actions">
+          <button class="action-btn" onclick="toggleLike(this)">
+            <div class="icon-wrap">
+              <svg class="heart" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
+            <span class="action-count">2.4k</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Comments coming soon')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="action-count">186</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Saved to your collection')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="action-count">Save</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Link copied!')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+              </svg>
+            </div>
+            <span class="action-count">Share</span>
+          </button>
+        </div>
+
+        <!-- Swipe right hint (first slide only) -->
+        <div class="swipe-hint">
+          <div class="swipe-arrow"></div>
+          <span>Profile</span>
+        </div>
+      </div>
+
+      <!-- Slide 2 -->
+      <div class="video-slide" data-artist="mmmmonexx" data-index="1">
+        <iframe class="video-embed"
+          src="https://www.youtube.com/embed/yBY7ZAf2tYY?autoplay=0&loop=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+          loading="lazy">
+        </iframe>
+        <div class="video-overlay"></div>
+
+        <div class="artist-info">
+          <div class="artist-info-row" onclick="goToProfile('mmmmonexx')">
+            <div class="avatar avatar-sm" style="background:#1A2A1A;color:#90C090;">M</div>
+            <div>
+              <div class="artist-name">Mmmmonexx</div>
+              <div class="artist-handle">@mmmmonexx</div>
+            </div>
+          </div>
+          <div class="video-title">Colour studies — gouache on paper</div>
+          <div class="video-tags">
+            <span class="video-tag">gouache</span>
+            <span class="video-tag">colours</span>
+            <span class="video-tag">analog</span>
+          </div>
+        </div>
+
+        <div class="side-actions">
+          <button class="action-btn" onclick="toggleLike(this)">
+            <div class="icon-wrap">
+              <svg class="heart" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
+            <span class="action-count">5.1k</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Comments coming soon')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="action-count">341</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Saved to your collection')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="action-count">Save</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Link copied!')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+              </svg>
+            </div>
+            <span class="action-count">Share</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Slide 3 -->
+      <div class="video-slide" data-artist="nisu" data-index="2">
+        <iframe class="video-embed"
+          src="https://www.youtube.com/embed/0cwa8eCYT0o?autoplay=0&loop=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+          loading="lazy">
+        </iframe>
+        <div class="video-overlay"></div>
+
+        <div class="artist-info">
+          <div class="artist-info-row" onclick="goToProfile('nisu')">
+            <div class="avatar avatar-sm" style="background:#2A1A1A;color:#C09080;">N</div>
+            <div>
+              <div class="artist-name">Nisu</div>
+              <div class="artist-handle">@artbynisu</div>
+            </div>
+          </div>
+          <div class="video-title">Sketchbook walk — pen & watercolour</div>
+          <div class="video-tags">
+            <span class="video-tag">sketch</span>
+            <span class="video-tag">watercolour</span>
+            <span class="video-tag">pen</span>
+          </div>
+        </div>
+
+        <div class="side-actions">
+          <button class="action-btn" onclick="toggleLike(this)">
+            <div class="icon-wrap">
+              <svg class="heart" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
+            <span class="action-count">8.7k</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Comments coming soon')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="action-count">920</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Saved to your collection')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="action-count">Save</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Link copied!')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+              </svg>
+            </div>
+            <span class="action-count">Share</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Slide 4 -->
+      <div class="video-slide" data-artist="drewscape" data-index="3">
+        <iframe class="video-embed"
+          src="https://www.youtube.com/embed/Bo9o37kYm-0?autoplay=0&loop=1&mute=1&controls=0&modestbranding=1&playsinline=1&rel=0&showinfo=0"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+          loading="lazy">
+        </iframe>
+        <div class="video-overlay"></div>
+
+        <div class="artist-info">
+          <div class="artist-info-row" onclick="goToProfile('drewscape')">
+            <div class="avatar avatar-sm" style="background:#1A1A2A;color:#8080C0;">D</div>
+            <div>
+              <div class="artist-name">Drewscape</div>
+              <div class="artist-handle">@drewscape-art</div>
+            </div>
+          </div>
+          <div class="video-title">Urban sketching — marker & ink</div>
+          <div class="video-tags">
+            <span class="video-tag">urban</span>
+            <span class="video-tag">marker</span>
+            <span class="video-tag">ink</span>
+          </div>
+        </div>
+
+        <div class="side-actions">
+          <button class="action-btn" onclick="toggleLike(this)">
+            <div class="icon-wrap">
+              <svg class="heart" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
+            <span class="action-count">3.2k</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Comments coming soon')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="action-count">215</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Saved to your collection')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <span class="action-count">Save</span>
+          </button>
+          <button class="action-btn" onclick="showToast('Link copied!')">
+            <div class="icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+              </svg>
+            </div>
+            <span class="action-count">Share</span>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /video-feed -->
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+      <button class="nav-item" onclick="window.location.href='menu.html'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span class="nav-label">YOU</span>
+      </button>
+      <button class="nav-item" id="navFollow" onclick="switchTab('follow')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span class="nav-label">FOLLOW</span>
+      </button>
+      <button class="nav-item active" id="navDiscover">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
+        </svg>
+        <span class="nav-label">DISCOVER</span>
+      </button>
+      <button class="nav-item" onclick="window.location.href='profile.html'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <span class="nav-label">ARTIST</span>
+      </button>
+    </nav>
+
+  </div><!-- /feed-page -->
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+</div><!-- /app-shell -->
+
+<script>
+  // ---- Tab Switch ----
+  function switchTab(tab) {
+    const follow   = document.getElementById('tabFollow');
+    const discover = document.getElementById('tabDiscover');
+    const navF     = document.getElementById('navFollow');
+    const navD     = document.getElementById('navDiscover');
+
+    if (tab === 'follow') {
+      follow.classList.add('active');
+      discover.classList.remove('active');
+      navF.classList.add('active');
+      navD.classList.remove('active');
+      showToast('Showing artists you follow');
+    } else {
+      discover.classList.add('active');
+      follow.classList.remove('active');
+      navD.classList.add('active');
+      navF.classList.remove('active');
+      showToast('Discover new artists');
+    }
+  }
+
+  // ---- Search Bar Pull Down ----
+  let touchStartY = 0;
+  let searchVisible = false;
+  const feed = document.getElementById('videoFeed');
+  const searchBar = document.getElementById('searchBar');
+  const searchClose = document.getElementById('searchClose');
+
+  feed.addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  feed.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    // Pull down at top
+    if (dy > 60 && feed.scrollTop === 0 && !searchVisible) {
+      showSearch();
+    }
+  }, { passive: true });
+
+  searchClose.addEventListener('click', hideSearch);
+
+  function showSearch() {
+    searchVisible = true;
+    searchBar.classList.add('visible');
+  }
+  function hideSearch() {
+    searchVisible = false;
+    searchBar.classList.remove('visible');
+  }
+
+  // ---- Search chips ----
+  document.querySelectorAll('.search-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.search-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+
+  // ---- Like Toggle ----
+  function toggleLike(btn) {
+    btn.classList.toggle('liked');
+    const countEl = btn.querySelector('.action-count');
+    const count = parseInt(countEl.textContent.replace(/[^0-9.]/g, ''));
+    if (btn.classList.contains('liked')) {
+      showToast('❤️ Added to your likes');
+    }
+  }
+
+  // ---- Toast ----
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ---- Navigate to Profile ----
+  function goToProfile(artist) {
+    sessionStorage.setItem('currentArtist', artist);
+    window.location.href = 'profile.html';
+  }
+
+  // ---- Horizontal Swipe → Profile ----
+  let hTouchStartX = 0;
+  let hTouchStartY = 0;
+
+  document.getElementById('feed-page').addEventListener('touchstart', e => {
+    hTouchStartX = e.touches[0].clientX;
+    hTouchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.getElementById('feed-page').addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - hTouchStartX;
+    const dy = Math.abs(e.changedTouches[0].clientY - hTouchStartY);
+    // Horizontal swipe, not vertical scroll
+    if (dx < -60 && dy < 50) {
+      window.location.href = 'profile.html';
+    }
+  }, { passive: true });
+
+  // Remove swipe hint after 4s
+  setTimeout(() => {
+    const hint = document.querySelector('.swipe-hint');
+    if (hint) hint.style.opacity = '0';
+  }, 4000);
+</script>
+</body>
+</html>
