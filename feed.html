@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Art Gem — Feed</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0D0D0D;
+      overscroll-behavior: none;
+    }
+
+    #feed-page {
+      width: 100%;
+      height: 100dvh;
+      position: relative;
+      overflow: hidden;
+      background: #0D0D0D;
+    }
+
+    /* ---- Search Bar ---- */
+    .search-bar-wrap {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 30;
+      padding: calc(env(safe-area-inset-top, 0px) + 52px) 16px 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%);
+      transform: translateY(-110%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+    .search-bar-wrap.visible {
+      transform: translateY(0);
+      pointer-events: all;
+    }
+    .search-input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 50px;
+      padding: 10px 16px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .search-input-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      color: #fff;
+    }
+    .search-input-row input::placeholder { color: rgba(255,255,255,0.45); }
+    .search-input-row svg { color: rgba(255,255,255,0.55); flex-shrink: 0; }
+    .search-chips {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .search-chips::-webkit-scrollbar { display: none; }
+    .search-chip {
+      flex-shrink: 0;
+      padding: 5px 14px;
+      border-radius: 50px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.75);
+      font-size: 0.75rem;
+      font-family: var(--font-body);
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .search-chip.active {
+      background: #A083D5;
+      border-color: #A083D5;
+      color: #fff;
+    }
+
+    /* ---- Top HUD ---- */
+    .feed-hud {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: calc(env(safe-area-inset-top, 12px) + 6px);
+      padding-bottom: 8px;
+      pointer-events: none;
+    }
+    .feed-tabs {
+      display: flex;
+      gap: 24px;
+      pointer-events: all;
+    }
+    .feed-tab {
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.45);
+      cursor: pointer;
+      padding: 8px 2px;
+      position: relative;
+      background: none;
+      border: none;
+      letter-spacing: 0.01em;
+      transition: color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .feed-tab::after {
+      content: '';
+      position: absolute;
+      bottom: 3px; left: 0; right: 0;
+      height: 2px;
+      border-radius: 2px;
+      background: #fff;
+      transform: scaleX(0);
+      transition: transform 0.25s ease;
+    }
+    .feed-tab.active { color: #fff; }
+    .feed-tab.active::after { transform: scaleX(1); }
+
+    .speed-badge {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 12px) + 8px);
+      right: 16px;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 50px;
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--font-body);
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      z-index: 20;
+    }
+
+    /* ---- Video Feed ---- */
+    .video-feed {
+      position: absolute;
+      inset: 0;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .video-feed::-webkit-scrollbar { display: none; }
+
+    /* ---- Video Slide ---- */
+    .video-slide {
+      width: 100%;
+      height: 100dvh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      position: relative;
+      background: #111;
+      overflow: hidden;
+    }
+
+    .video-slide video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .video-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.1) 0%,
+        transparent 25%,
+        transparent 50%,
+        rgba(0,0,0,0.15) 70%,
+        rgba(0,0,0,0.72) 100%
+      );
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* ---- Artist Info ---- */
+    .artist-info {
+      position: absolute;
+      bottom: 0; left: 0;
+      right: 72px;
+      padding: 20px 18px 36px;
+      z-index: 5;
+    }
+    .artist-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .artist-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .artist-name {
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+    }
+    .artist-handle {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.55);
+    }
+    .video-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: #fff;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    .video-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .video-tag {
+      font-size: 0.73rem;
+      color: rgba(255,255,255,0.6);
+      font-weight: 500;
+      font-family: var(--font-body);
+    }
+    .video-tag::before { content: '#'; }
+
+    /* ---- Side Actions ---- */
+    .side-actions {
+      position: absolute;
+      right: 14px;
+      bottom: 32px;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+    }
+    .action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .action-icon {
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .action-btn:active .action-icon { transform: scale(0.88); }
+    .action-btn.liked .action-icon  { background: rgba(244,224,100,0.22); }
+    .action-btn svg { color: #fff; }
+    .action-btn.liked svg.heart-icon {
+      color: #F4E064;
+      fill: #F4E064;
+    }
+    .action-count {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.75);
+      font-family: var(--font-body);
+    }
+
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(26,26,26,0.92);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 500;
+      font-family: var(--font-body);
+      padding: 10px 20px;
+      border-radius: 50px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, bottom 0.25s;
+      z-index: 999;
+      white-space: nowrap;
+      backdrop-filter: blur(12px);
+    }
+    .toast.show { opacity: 1; bottom: 90px; }
+
+  </style>
+</head>
+<body>
+<div id="feed-page">
+
+  <!-- Search Bar -->
+  <div class="search-bar-wrap" id="searchBar">
+    <div class="search-input-row">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" placeholder="Search artists, styles, mediums…" />
+      <svg id="searchClose" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="cursor:pointer">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </div>
+    <div class="search-chips">
+      <button class="search-chip active">All</button>
+      <button class="search-chip">Watercolour</button>
+      <button class="search-chip">Oil Paint</button>
+      <button class="search-chip">Charcoal</button>
+      <button class="search-chip">Sketch</button>
+      <button class="search-chip">Ceramics</button>
+      <button class="search-chip">Printmaking</button>
+      <button class="search-chip">Calligraphy</button>
+    </div>
+  </div>
+
+  <!-- Top HUD -->
+  <div class="feed-hud">
+    <div class="feed-tabs">
+      <button class="feed-tab active" id="tabFollow" onclick="switchTab('follow')">Follow</button>
+      <button class="feed-tab" id="tabDiscover" onclick="switchTab('discover')">Discover</button>
+    </div>
+  </div>
+  <div class="speed-badge" id="speedBadge" onclick="cycleSpeed()">× 1</div>
+
+  <!-- Video Feed -->
+  <div class="video-feed" id="videoFeed">
+
+    <!-- FOLLOW: Video 1 -->
+    <div class="video-slide" data-tab="follow">
+      <video src="https://rancmd.github.io/ag/video1.mp4" autoplay loop muted playsinline webkit-playsinline preload="auto"></video>
+      <div class="video-overlay"></div>
+      <div class="artist-info">
+        <div class="artist-row" onclick="goToProfile()">
+          <div class="artist-avatar" style="background:#2A1A4A;">C</div>
+          <div>
+            <div class="artist-name">Chommang</div>
+            <div class="artist-handle">@chommang</div>
+          </div>
+        </div>
+        <div class="video-title">Ink & wash — late night study</div>
+        <div class="video-tags">
+          <span class="video-tag">ink</span>
+          <span class="video-tag">wash</span>
+          <span class="video-tag">process</span>
+        </div>
+      </div>
+      <div class="side-actions">
+        <button class="action-btn" onclick="toggleLike(this)">
+          <div class="action-icon"><svg class="heart-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <span class="action-count">2.4k</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Comments coming soon')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">186</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Saved ✓')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">Save</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Link copied!')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></div>
+          <span class="action-count">Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- FOLLOW: Video 2 -->
+    <div class="video-slide" data-tab="follow">
+      <video src="https://rancmd.github.io/ag/video2.mp4" loop muted playsinline webkit-playsinline preload="none"></video>
+      <div class="video-overlay"></div>
+      <div class="artist-info">
+        <div class="artist-row" onclick="goToProfile()">
+          <div class="artist-avatar" style="background:#1A2A1A;">M</div>
+          <div>
+            <div class="artist-name">Mmmmonexx</div>
+            <div class="artist-handle">@mmmmonexx</div>
+          </div>
+        </div>
+        <div class="video-title">Colour studies — gouache on paper</div>
+        <div class="video-tags">
+          <span class="video-tag">gouache</span>
+          <span class="video-tag">colour</span>
+          <span class="video-tag">analog</span>
+        </div>
+      </div>
+      <div class="side-actions">
+        <button class="action-btn" onclick="toggleLike(this)">
+          <div class="action-icon"><svg class="heart-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <span class="action-count">5.1k</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Comments coming soon')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">341</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Saved ✓')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">Save</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Link copied!')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></div>
+          <span class="action-count">Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- FOLLOW: Video 3 -->
+    <div class="video-slide" data-tab="follow">
+      <video src="https://rancmd.github.io/ag/video3.mp4" loop muted playsinline webkit-playsinline preload="none"></video>
+      <div class="video-overlay"></div>
+      <div class="artist-info">
+        <div class="artist-row" onclick="goToProfile()">
+          <div class="artist-avatar" style="background:#2A1A1A;">N</div>
+          <div>
+            <div class="artist-name">Nisu</div>
+            <div class="artist-handle">@artbynisu</div>
+          </div>
+        </div>
+        <div class="video-title">Sketchbook walk — pen & watercolour</div>
+        <div class="video-tags">
+          <span class="video-tag">sketch</span>
+          <span class="video-tag">watercolour</span>
+          <span class="video-tag">pen</span>
+        </div>
+      </div>
+      <div class="side-actions">
+        <button class="action-btn" onclick="toggleLike(this)">
+          <div class="action-icon"><svg class="heart-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <span class="action-count">8.7k</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Comments coming soon')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">920</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Saved ✓')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">Save</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Link copied!')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></div>
+          <span class="action-count">Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- DISCOVER: Video 4 -->
+    <div class="video-slide" data-tab="discover" style="display:none">
+      <video src="https://rancmd.github.io/ag/video4.mp4" loop muted playsinline webkit-playsinline preload="none"></video>
+      <div class="video-overlay"></div>
+      <div class="artist-info">
+        <div class="artist-row" onclick="goToProfile()">
+          <div class="artist-avatar" style="background:#1A1A2A;">D</div>
+          <div>
+            <div class="artist-name">Drewscape</div>
+            <div class="artist-handle">@drewscape-art</div>
+          </div>
+        </div>
+        <div class="video-title">Urban sketching — marker & ink</div>
+        <div class="video-tags">
+          <span class="video-tag">urban</span>
+          <span class="video-tag">marker</span>
+          <span class="video-tag">ink</span>
+        </div>
+      </div>
+      <div class="side-actions">
+        <button class="action-btn" onclick="toggleLike(this)">
+          <div class="action-icon"><svg class="heart-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <span class="action-count">3.2k</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Comments coming soon')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">215</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Saved ✓')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">Save</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Link copied!')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></div>
+          <span class="action-count">Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- DISCOVER: Video 5 -->
+    <div class="video-slide" data-tab="discover" style="display:none">
+      <video src="https://rancmd.github.io/ag/video5.mp4" loop muted playsinline webkit-playsinline preload="none"></video>
+      <div class="video-overlay"></div>
+      <div class="artist-info">
+        <div class="artist-row" onclick="goToProfile()">
+          <div class="artist-avatar" style="background:#2A2A1A;">A</div>
+          <div>
+            <div class="artist-name">Akihito</div>
+            <div class="artist-handle">@akihitoyoshitomi</div>
+          </div>
+        </div>
+        <div class="video-title">Sumi-e — bamboo in rain</div>
+        <div class="video-tags">
+          <span class="video-tag">sumi-e</span>
+          <span class="video-tag">ink</span>
+          <span class="video-tag">japanese</span>
+        </div>
+      </div>
+      <div class="side-actions">
+        <button class="action-btn" onclick="toggleLike(this)">
+          <div class="action-icon"><svg class="heart-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <span class="action-count">11k</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Comments coming soon')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">1.2k</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Saved ✓')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">Save</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Link copied!')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></div>
+          <span class="action-count">Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- DISCOVER: Video 6 -->
+    <div class="video-slide" data-tab="discover" style="display:none">
+      <video src="https://rancmd.github.io/ag/video6.mp4" loop muted playsinline webkit-playsinline preload="none"></video>
+      <div class="video-overlay"></div>
+      <div class="artist-info">
+        <div class="artist-row" onclick="goToProfile()">
+          <div class="artist-avatar" style="background:#1A1A1A;">K</div>
+          <div>
+            <div class="artist-name">Kira Voss</div>
+            <div class="artist-handle">@kiravoss</div>
+          </div>
+        </div>
+        <div class="video-title">Oil pastel — golden hour landscape</div>
+        <div class="video-tags">
+          <span class="video-tag">oil pastel</span>
+          <span class="video-tag">landscape</span>
+          <span class="video-tag">process</span>
+        </div>
+      </div>
+      <div class="side-actions">
+        <button class="action-btn" onclick="toggleLike(this)">
+          <div class="action-icon"><svg class="heart-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <span class="action-count">6.8k</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Comments coming soon')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">540</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Saved ✓')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+          <span class="action-count">Save</span>
+        </button>
+        <button class="action-btn" onclick="showToast('Link copied!')">
+          <div class="action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg></div>
+          <span class="action-count">Share</span>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /video-feed -->
+
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+  let currentTab = 'follow';
+
+  // ---- Tab switch ----
+  function switchTab(tab) {
+    if (tab === currentTab) return;
+    currentTab = tab;
+    document.getElementById('tabFollow').classList.toggle('active', tab === 'follow');
+    document.getElementById('tabDiscover').classList.toggle('active', tab === 'discover');
+    document.querySelectorAll('.video-slide').forEach(s => {
+      s.style.display = s.dataset.tab === tab ? 'block' : 'none';
+    });
+    document.getElementById('videoFeed').scrollTo({ top: 0, behavior: 'instant' });
+    pauseAll();
+    const first = document.querySelector(`.video-slide[data-tab="${tab}"] video`);
+    if (first) first.play().catch(() => {});
+  }
+
+  // ---- Pause all videos ----
+  function pauseAll() {
+    document.querySelectorAll('video').forEach(v => v.pause());
+  }
+
+  // ---- IntersectionObserver: autoplay visible video ----
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const video = entry.target.querySelector('video');
+      if (!video) return;
+      if (entry.isIntersecting && entry.target.dataset.tab === currentTab) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    });
+  }, { threshold: 0.6 });
+
+  document.querySelectorAll('.video-slide').forEach(s => observer.observe(s));
+
+  // ---- Speed ----
+  const speeds = ['× 1', '× 1.5', '× 2'];
+  let speedIdx = 0;
+  function cycleSpeed() {
+    speedIdx = (speedIdx + 1) % speeds.length;
+    document.getElementById('speedBadge').textContent = speeds[speedIdx];
+    const rate = parseFloat(speeds[speedIdx].replace('× ', ''));
+    document.querySelectorAll('video').forEach(v => v.playbackRate = rate);
+    showToast('Speed ' + speeds[speedIdx]);
+  }
+
+  // ---- Search bar (pull down) ----
+  let startY = 0;
+  let searchVisible = false;
+  const feedEl = document.getElementById('videoFeed');
+  feedEl.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+  feedEl.addEventListener('touchend', e => {
+    const dy = e.changedTouches[0].clientY - startY;
+    if (dy > 55 && feedEl.scrollTop === 0 && !searchVisible) {
+      searchVisible = true;
+      document.getElementById('searchBar').classList.add('visible');
+    }
+  }, { passive: true });
+  document.getElementById('searchClose').addEventListener('click', () => {
+    searchVisible = false;
+    document.getElementById('searchBar').classList.remove('visible');
+  });
+  document.querySelectorAll('.search-chip').forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll('.search-chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    });
+  });
+
+  // ---- Like ----
+  function toggleLike(btn) {
+    btn.classList.toggle('liked');
+    if (btn.classList.contains('liked')) showToast('❤️ Liked');
+  }
+
+  // ---- Go to profile (tell parent shell) ----
+  function goToProfile() {
+    if (window.parent && window.parent.goToPanel) {
+      window.parent.goToPanel(2); // panel 2 = profile
+    }
+  }
+
+  // ---- Toast ----
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+</script>
+</body>
+</html>
