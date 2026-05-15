@@ -7,7 +7,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Art Gem" />
   <meta name="theme-color" content="#0D0D0D" />
-  <!-- PWA icons (add your own later) -->
   <link rel="apple-touch-icon" href="icon.png" />
   <title>Art Gem</title>
   <style>
@@ -18,22 +17,25 @@
       height: 100%;
       overflow: hidden;
       background: #0D0D0D;
-      /* Prevent any bounce / rubber-band on the shell itself */
       overscroll-behavior: none;
     }
 
-    /* ---- The track: 3 panels side by side ---- */
+    /*
+      3 panels side by side:
+      [0: menu/user]  [1: feed]  [2: artist profile]
+      Start centred on feed → translateX(-100vw)
+      Swipe RIGHT → panel 0 (menu)
+      Swipe LEFT  → panel 2 (artist profile)
+    */
     #track {
       display: flex;
-      width: 300vw;          /* 3 panels × 100vw */
+      width: 300vw;
       height: 100dvh;
-      /* Start centred on feed (panel index 1) */
       transform: translateX(-100vw);
       transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
       will-change: transform;
     }
 
-    /* ---- Each panel is one full screen ---- */
     .panel {
       width: 100vw;
       height: 100dvh;
@@ -42,17 +44,14 @@
       overflow: hidden;
     }
 
-    /* ---- Each iframe fills its panel completely ---- */
     .panel iframe {
       width: 100%;
       height: 100%;
       border: none;
       display: block;
-      /* Critical for iOS iframe scroll */
-      overflow: hidden;
     }
 
-    /* ---- Loading state ---- */
+    /* Loading dots */
     .panel-loader {
       position: absolute;
       inset: 0;
@@ -60,25 +59,22 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
       z-index: 10;
       transition: opacity 0.4s;
     }
-    .panel-loader.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
+    .panel-loader.hidden { opacity: 0; pointer-events: none; }
     .loader-dot {
-      width: 8px; height: 8px;
+      width: 7px; height: 7px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.3);
-      animation: loaderPulse 1.2s ease infinite;
+      background: rgba(255,255,255,0.25);
+      animation: ldPulse 1.2s ease infinite;
     }
-    .loader-dot:nth-child(2) { animation-delay: 0.2s; margin: 0 6px; }
-    .loader-dot:nth-child(3) { animation-delay: 0.4s; }
-
-    @keyframes loaderPulse {
-      0%, 100% { opacity: 0.3; transform: scale(0.8); }
-      50%       { opacity: 1;   transform: scale(1.1); }
+    .loader-dot:nth-child(2) { animation-delay: 0.15s; }
+    .loader-dot:nth-child(3) { animation-delay: 0.30s; }
+    @keyframes ldPulse {
+      0%,100% { opacity:0.25; transform:scale(0.8); }
+      50%      { opacity:1;    transform:scale(1.1); }
     }
   </style>
 </head>
@@ -86,136 +82,103 @@
 
 <div id="track">
 
-  <!-- Panel 0: Menu (swipe right to reach) -->
-  <div class="panel" id="panel-menu">
+  <!-- Panel 0: User / Menu (swipe RIGHT to reach) -->
+  <div class="panel">
     <div class="panel-loader" id="loader-menu">
-      <div class="loader-dot"></div>
-      <div class="loader-dot"></div>
-      <div class="loader-dot"></div>
+      <div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div>
     </div>
-    <iframe
-      id="frame-menu"
-      src="menu.html"
-      scrolling="no"
-      onload="hideLoader('menu')"
-    ></iframe>
+    <iframe id="frame-menu" src="menu.html" onload="hideLoader('menu')"></iframe>
   </div>
 
-  <!-- Panel 1: Feed (default / centre) -->
-  <div class="panel" id="panel-feed">
+  <!-- Panel 1: Feed (default, centre) -->
+  <div class="panel">
     <div class="panel-loader" id="loader-feed">
-      <div class="loader-dot"></div>
-      <div class="loader-dot"></div>
-      <div class="loader-dot"></div>
+      <div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div>
     </div>
-    <iframe
-      id="frame-feed"
-      src="feed.html"
-      scrolling="no"
-      onload="hideLoader('feed')"
-    ></iframe>
+    <iframe id="frame-feed" src="feed.html" onload="hideLoader('feed')"></iframe>
   </div>
 
-  <!-- Panel 2: Profile (swipe left to reach) -->
-  <div class="panel" id="panel-profile">
+  <!-- Panel 2: Artist Profile (swipe LEFT to reach) -->
+  <div class="panel">
     <div class="panel-loader" id="loader-profile">
-      <div class="loader-dot"></div>
-      <div class="loader-dot"></div>
-      <div class="loader-dot"></div>
+      <div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div>
     </div>
-    <iframe
-      id="frame-profile"
-      src="profile.html"
-      scrolling="no"
-      onload="hideLoader('profile')"
-    ></iframe>
+    <iframe id="frame-profile" src="profile.html" onload="hideLoader('profile')"></iframe>
   </div>
 
-</div><!-- /track -->
+</div>
 
 <script>
-  // ---- Panel state ----
-  // 0 = menu, 1 = feed, 2 = profile
-  let currentPanel = 1;
-  const PANEL_COUNT = 3;
+  let currentPanel = 1; // start on feed
   const track = document.getElementById('track');
 
-  function goToPanel(index, animate = true) {
-    if (index < 0 || index >= PANEL_COUNT) return;
+  function goToPanel(index, animate) {
+    if (animate === undefined) animate = true;
+    if (index < 0 || index > 2) return;
     currentPanel = index;
     track.style.transition = animate
-      ? 'transform 0.38s cubic-bezier(0.4, 0, 0.2, 1)'
+      ? 'transform 0.38s cubic-bezier(0.4,0,0.2,1)'
       : 'none';
     track.style.transform = `translateX(${-index * 100}vw)`;
   }
 
-  // Expose to iframes so they can trigger navigation
+  // Expose so iframes can call: window.parent.goToPanel(0)
   window.goToPanel = goToPanel;
   window.getCurrentPanel = () => currentPanel;
 
-  // ---- Hide loader when iframe loads ----
   function hideLoader(name) {
     const el = document.getElementById('loader-' + name);
     if (el) el.classList.add('hidden');
   }
 
-  // ---- Touch / swipe handling on the shell ----
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchStartTime = 0;
-  let isDragging = false;
-  let dragStartPanel = 1;
+  // ---- Touch handling on the shell ----
+  // The feed iframe handles its own vertical scroll and sends
+  // horizontal swipe signals up via postMessage.
+  // We also handle direct touches on menu/profile panels here.
 
+  let tx = 0, ty = 0, dragging = false, dragFrom = 1;
+
+  // Listen for messages from feed iframe
+  window.addEventListener('message', e => {
+    if (e.data === 'swipe-left')  goToPanel(currentPanel + 1);
+    if (e.data === 'swipe-right') goToPanel(currentPanel - 1);
+  });
+
+  // Direct touch on non-feed panels (menu, profile) for swiping back
   document.addEventListener('touchstart', e => {
-    touchStartX    = e.touches[0].clientX;
-    touchStartY    = e.touches[0].clientY;
-    touchStartTime = Date.now();
-    isDragging     = false;
-    dragStartPanel = currentPanel;
+    // Only handle touches on the track itself (not inside iframes)
+    tx = e.touches[0].clientX;
+    ty = e.touches[0].clientY;
+    dragging = false;
+    dragFrom = currentPanel;
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
-    const dx = e.touches[0].clientX - touchStartX;
-    const dy = Math.abs(e.touches[0].clientY - touchStartY);
-
-    // Only hijack clearly horizontal swipes
-    if (!isDragging && Math.abs(dx) > 8 && Math.abs(dx) > dy * 1.5) {
-      isDragging = true;
+    const dx = e.touches[0].clientX - tx;
+    const dy = Math.abs(e.touches[0].clientY - ty);
+    if (!dragging && Math.abs(dx) > 10 && Math.abs(dx) > dy * 1.2) {
+      dragging = true;
     }
-
-    if (isDragging) {
-      // Live drag: move track with finger
-      const offset = -(dragStartPanel * window.innerWidth) + dx;
+    if (dragging) {
+      const offset = -(dragFrom * window.innerWidth) + dx;
       track.style.transition = 'none';
-      track.style.transform  = `translateX(${offset}px)`;
+      track.style.transform = `translateX(${offset}px)`;
     }
   }, { passive: true });
 
   document.addEventListener('touchend', e => {
-    if (!isDragging) return;
+    if (!dragging) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    const t  = Date.now();
+    const isFlick = Math.abs(dx) > 40;
+    const isDrag  = Math.abs(dx) > window.innerWidth * 0.3;
 
-    const dx       = e.changedTouches[0].clientX - touchStartX;
-    const duration = Date.now() - touchStartTime;
-    const isFlick  = duration < 300 && Math.abs(dx) > 40;
-    const isDrag   = Math.abs(dx) > window.innerWidth * 0.3;
+    if ((isFlick || isDrag) && dx < 0 && dragFrom < 2) goToPanel(dragFrom + 1);
+    else if ((isFlick || isDrag) && dx > 0 && dragFrom > 0) goToPanel(dragFrom - 1);
+    else goToPanel(dragFrom);
 
-    if ((isFlick || isDrag) && dx < 0 && dragStartPanel < PANEL_COUNT - 1) {
-      // Swipe left → next panel (profile)
-      goToPanel(dragStartPanel + 1);
-    } else if ((isFlick || isDrag) && dx > 0 && dragStartPanel > 0) {
-      // Swipe right → prev panel (menu)
-      goToPanel(dragStartPanel - 1);
-    } else {
-      // Snap back
-      goToPanel(dragStartPanel);
-    }
-
-    isDragging = false;
+    dragging = false;
   }, { passive: true });
-
-  // ---- Allow iframes to call navigation ----
-  // Usage from inside an iframe: window.parent.goToPanel(0)
-  // panel 0 = menu, 1 = feed, 2 = profile
 </script>
 
 </body>
