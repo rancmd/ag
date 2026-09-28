@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="#A083D5"/>
+  <!-- Gem body -->
+  <path d="M90 26 L150 72 L90 154 L30 72 Z" fill="url(#g1)"/>
+  <!-- Top facet -->
+  <path d="M30 72 L90 26 L150 72 L90 72 Z" fill="url(#g2)"/>
+  <!-- Dividing line -->
+  <line x1="30" y1="72" x2="150" y2="72" stroke="rgba(255,255,255,0.18)" stroke-width="1.2"/>
+  <!-- Sparkle -->
+  <path d="M141 20 L144.5 30 L155 33 L144.5 36 L141 46 L137.5 36 L127 33 L137.5 30 Z" fill="#EFCF20"/>
+  <circle cx="133" cy="25" r="2.5" fill="#F4E064" opacity="0.7"/>
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#D4BAFF"/>
+      <stop offset="100%" stop-color="#6B3FA0"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.35)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.06)"/>
+    </linearGradient>
+  </defs>
+</svg>

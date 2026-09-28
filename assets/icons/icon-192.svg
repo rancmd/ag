@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- Background -->
+  <rect width="192" height="192" rx="42" fill="#A083D5"/>
+  <!-- Gem body -->
+  <path d="M96 28 L160 76 L96 164 L32 76 Z" fill="url(#g1)"/>
+  <!-- Top facet -->
+  <path d="M32 76 L96 28 L160 76 L96 76 Z" fill="url(#g2)"/>
+  <!-- Dividing line -->
+  <line x1="32" y1="76" x2="160" y2="76" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <!-- Inner gem lines -->
+  <line x1="96" y1="28" x2="96" y2="164" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <!-- Sparkle -->
+  <path d="M150 22 L154 34 L166 38 L154 42 L150 54 L146 42 L134 38 L146 34 Z" fill="#EFCF20"/>
+  <!-- Small sparkle dot -->
+  <circle cx="142" cy="28" r="3" fill="#F4E064" opacity="0.7"/>
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#D4BAFF"/>
+      <stop offset="100%" stop-color="#6B3FA0"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.35)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.06)"/>
+    </linearGradient>
+  </defs>
+</svg>

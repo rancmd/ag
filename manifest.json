@@ -1,0 +1,26 @@
+{
+  "name": "ART GEM",
+  "short_name": "ART GEM",
+  "description": "A free, ad-free creative world. Discover and watch artists create.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#A083D5",
+  "theme_color": "#A083D5",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["art", "entertainment", "social"],
+  "lang": "en"
+}
