@@ -135,7 +135,7 @@ function buildFeedCard(v) {
   artistBtn.setAttribute('aria-label', `View ${artist.name}'s profile`);
   artistBtn.innerHTML = `
     <div class="feed-avatar" style="background:${artist.avatarColor}">${artist.avatarInitial}</div>
-    <div>
+    <div class="feed-artist-meta">
       <div class="feed-artist-name">${artist.name}</div>
       <div class="feed-artist-craft">${artist.craft}</div>
     </div>`;
@@ -223,10 +223,18 @@ function playFeedCard(card) {
       iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
       iframe.setAttribute('allowfullscreen', '');
       const muteParam = feedIsMuted ? 1 : 0;
-      iframe.src = `https://www.youtube.com/embed/${card.dataset.youtubeId}?autoplay=1&mute=${muteParam}&playsinline=1&enablejsapi=1&controls=0&loop=1&playlist=${card.dataset.youtubeId}&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1`;
+      const originParam = (window.location.origin && window.location.origin !== 'null')
+        ? `&origin=${encodeURIComponent(window.location.origin)}`
+        : '';
+      // Clean YouTube embed: controls=0, modestbranding=1, NO playlist parameter (removes next/prev arrows overlay)
+      iframe.src = `https://www.youtube.com/embed/${card.dataset.youtubeId}?autoplay=1&mute=${muteParam}&playsinline=1&enablejsapi=1&controls=0&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1${originParam}`;
       iframe.onload = () => {
-        const poster = wrap.querySelector('.feed-yt-poster');
-        if (poster) poster.classList.add('loaded');
+        sendYTCommand(iframe, 'listening');
+        // Fallback: fade out poster after 1000ms if playerState message isn't received
+        setTimeout(() => {
+          const poster = wrap.querySelector('.feed-yt-poster');
+          if (poster) poster.classList.add('loaded');
+        }, 1000);
       };
       wrap.appendChild(iframe);
     } else {
@@ -309,13 +317,55 @@ function toggleFeedMute() {
 function sendYTCommand(iframe, func, args = '') {
   try {
     if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage(JSON.stringify({
-        event: 'command',
-        func: func,
-        args: args
-      }), '*');
+      if (func === 'listening') {
+        iframe.contentWindow.postMessage(JSON.stringify({
+          event: 'listening'
+        }), '*');
+      } else {
+        iframe.contentWindow.postMessage(JSON.stringify({
+          event: 'command',
+          func: func,
+          args: args
+        }), '*');
+      }
     }
   } catch (e) {}
+}
+
+// Global postMessage handler for YouTube player events
+if (!window._ytFeedMessageAttached) {
+  window._ytFeedMessageAttached = true;
+  window.addEventListener('message', (e) => {
+    if (!e.data || typeof e.data !== 'string') return;
+    try {
+      const data = JSON.parse(e.data);
+      if (data.event === 'infoDelivery' && data.info) {
+        // playerState 1 = PLAYING -> reveal video seamlessly without loading flash
+        if (data.info.playerState === 1) {
+          document.querySelectorAll('#feed-scroll .feed-card').forEach(card => {
+            if (card.dataset.playing === 'true') {
+              const poster = card.querySelector('.feed-yt-poster');
+              if (poster && !poster.classList.contains('loaded')) {
+                poster.classList.add('loaded');
+              }
+            }
+          });
+        }
+        // playerState 0 = ENDED -> loop video seamlessly without playlist UI
+        if (data.info.playerState === 0) {
+          document.querySelectorAll('#feed-scroll .feed-card').forEach(card => {
+            if (card.dataset.playing === 'true') {
+              const iframe = card.querySelector('.feed-yt-iframe');
+              if (iframe) {
+                sendYTCommand(iframe, 'seekTo', [0, true]);
+                sendYTCommand(iframe, 'playVideo');
+              }
+            }
+          });
+        }
+      }
+    } catch (err) {}
+  });
 }
 
 // ── Update like button display ───────────────────────────────
