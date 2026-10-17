@@ -1,9 +1,10 @@
 // ============================================================
 // ART GEM — Feed Page (feed.js)
-// Vertical scroll-snap video feed with autoplay.
+// Vertical scroll-snap feed with YouTube embed autoplay & sound controls.
 // ============================================================
 
 let feedObserver = null;
+let feedIsMuted = true; // Required true for mobile autoplay policy
 
 function renderFeed() {
   const page = document.getElementById('page-feed');
@@ -30,21 +31,19 @@ function renderFeed() {
     feed.appendChild(buildFeedCard(v));
   });
 
-  // ── IntersectionObserver for autoplay ──────────────────
+  // ── IntersectionObserver for Autoplay ──────────────────
   if (feedObserver) feedObserver.disconnect();
 
   feedObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       const card = entry.target;
-      const video = card.querySelector('video');
-      if (!video) return;
-      if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-        video.play().catch(() => {});
-      } else {
-        video.pause();
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+        playFeedCard(card);
+      } else if (!entry.isIntersecting || entry.intersectionRatio < 0.4) {
+        pauseFeedCard(card);
       }
     });
-  }, { root: feed, threshold: 0.6 });
+  }, { root: feed, threshold: [0.35, 0.6] });
 
   feed.querySelectorAll('.feed-card').forEach(card => {
     feedObserver.observe(card);
@@ -55,9 +54,14 @@ function renderFeed() {
 }
 
 function cleanupFeed() {
-  if (feedObserver) { feedObserver.disconnect(); feedObserver = null; }
-  // Pause all videos
-  document.querySelectorAll('#feed-scroll video').forEach(v => v.pause());
+  if (feedObserver) {
+    feedObserver.disconnect();
+    feedObserver = null;
+  }
+  // Pause all playing videos
+  document.querySelectorAll('#feed-scroll .feed-card').forEach(card => {
+    pauseFeedCard(card);
+  });
   document.removeEventListener('artgem:statechange', onFeedStateChange);
 }
 
@@ -82,65 +86,56 @@ function buildFeedCard(v) {
   card.className = 'feed-card';
   card.dataset.videoId = v.id;
   card.dataset.artistId = artist.id;
+  card.dataset.cardType = v.type;
 
-  if (v.type === 'local') {
-    // ── Local video
+  if (v.type === 'youtube' && v.youtubeId) {
+    // ── YouTube Embed Wrapper with instant poster ───────────
+    card.dataset.youtubeId = v.youtubeId;
+    const wrap = document.createElement('div');
+    wrap.className = 'feed-yt-wrap';
+
+    const poster = document.createElement('div');
+    poster.className = 'feed-yt-poster';
+    const thumbUrl = v.thumbnail || `https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg`;
+    poster.style.backgroundImage = `url("${thumbUrl}")`;
+    wrap.appendChild(poster);
+
+    card.appendChild(wrap);
+  } else {
+    // ── Local Video Element ─────────────────────────────────
     const video = document.createElement('video');
     video.className = 'feed-video';
     video.src = v.src;
-    video.muted = true;
+    video.muted = feedIsMuted;
     video.loop = true;
     video.playsInline = true;
     video.setAttribute('playsinline', '');
     video.preload = 'metadata';
     card.appendChild(video);
-
-    // Tap card to play/pause
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.feed-artist-btn') || e.target.closest('.feed-right')) return;
-      toggleVideoPlayPause(video, card);
-    });
-
-  } else {
-    // ── YouTube thumbnail card
-    const thumb = v.thumbnail || `https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg`;
-    const bg = document.createElement('div');
-    bg.className = 'feed-yt-bg';
-    bg.style.backgroundImage = `url(${thumb})`;
-    card.appendChild(bg);
-
-    const center = document.createElement('div');
-    center.className = 'feed-yt-center';
-    center.innerHTML = `
-      <button class="feed-yt-play-btn" aria-label="Watch on YouTube">
-        ${iconPlay()}
-      </button>
-      <div class="feed-yt-label">▶ Watch on YouTube</div>`;
-    card.appendChild(center);
-
-    // Open YouTube on click (not on artist/action buttons)
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.feed-artist-btn') || e.target.closest('.feed-right')) return;
-      window.open(`https://www.youtube.com/watch?v=${v.youtubeId}`, '_blank', 'noopener');
-    });
   }
 
-  // ── Gradient overlay
+  // ── Tap card to toggle play/pause ─────────────────────────
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.feed-artist-btn') || e.target.closest('.feed-right')) return;
+    toggleCardPlayback(card);
+  });
+
+  // ── Gradient overlay ──────────────────────────────────────
   const overlay = document.createElement('div');
   overlay.className = 'feed-overlay';
   card.appendChild(overlay);
 
-  // ── Pause indicator
+  // ── Pause indicator ───────────────────────────────────────
   const pauseIndicator = document.createElement('div');
   pauseIndicator.className = 'feed-pause-indicator';
   pauseIndicator.innerHTML = `<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`;
   card.appendChild(pauseIndicator);
 
-  // ── Bottom info
+  // ── Bottom info bar ───────────────────────────────────────
   const bottom = document.createElement('div');
   bottom.className = 'feed-bottom';
 
-  // Left side
+  // Left side: Artist info + Title + Tags
   const left = document.createElement('div');
   left.className = 'feed-left';
 
@@ -172,9 +167,19 @@ function buildFeedCard(v) {
   left.appendChild(titleEl);
   left.appendChild(tagsEl);
 
-  // Right side actions
+  // Right side: Like + Sound + Follow
   const right = document.createElement('div');
   right.className = 'feed-right';
+
+  // Mute / Unmute Button
+  const muteBtn = document.createElement('button');
+  muteBtn.className = 'feed-action-btn feed-mute-btn';
+  muteBtn.setAttribute('aria-label', feedIsMuted ? 'Unmute' : 'Mute');
+  muteBtn.innerHTML = feedIsMuted ? iconVolumeMute() : iconVolume();
+  muteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleFeedMute();
+  });
 
   // Like button
   const liked = isLiked(v.id);
@@ -200,6 +205,7 @@ function buildFeedCard(v) {
     toggleFollow(artist.id);
   });
 
+  right.appendChild(muteBtn);
   right.appendChild(likeBtn);
   right.appendChild(followBtn);
 
@@ -210,9 +216,119 @@ function buildFeedCard(v) {
   return card;
 }
 
+// ── Play / Pause Card Controls ───────────────────────────────
+function playFeedCard(card) {
+  if (card.dataset.cardType === 'youtube' && card.dataset.youtubeId) {
+    const wrap = card.querySelector('.feed-yt-wrap');
+    if (!wrap) return;
+
+    let iframe = wrap.querySelector('iframe');
+    if (!iframe) {
+      // Mount iframe with autoplay
+      iframe = document.createElement('iframe');
+      iframe.className = 'feed-yt-iframe';
+      iframe.setAttribute('title', 'YouTube video player');
+      iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+      iframe.setAttribute('allowfullscreen', '');
+      const muteParam = feedIsMuted ? 1 : 0;
+      iframe.src = `https://www.youtube.com/embed/${card.dataset.youtubeId}?autoplay=1&mute=${muteParam}&playsinline=1&enablejsapi=1&controls=0&loop=1&playlist=${card.dataset.youtubeId}&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1`;
+      iframe.onload = () => {
+        const poster = wrap.querySelector('.feed-yt-poster');
+        if (poster) poster.classList.add('loaded');
+      };
+      wrap.appendChild(iframe);
+    } else {
+      // Resume already mounted player
+      sendYTCommand(iframe, 'playVideo');
+      sendYTCommand(iframe, feedIsMuted ? 'mute' : 'unMute');
+    }
+    card.dataset.playing = 'true';
+  } else {
+    const video = card.querySelector('video');
+    if (video) {
+      video.muted = feedIsMuted;
+      video.play().catch(() => {});
+      card.dataset.playing = 'true';
+    }
+  }
+}
+
+function pauseFeedCard(card) {
+  if (card.dataset.cardType === 'youtube') {
+    const iframe = card.querySelector('.feed-yt-iframe');
+    if (iframe) {
+      sendYTCommand(iframe, 'pauseVideo');
+    }
+  } else {
+    const video = card.querySelector('video');
+    if (video && !video.paused) {
+      video.pause();
+    }
+  }
+  card.dataset.playing = 'false';
+}
+
+function toggleCardPlayback(card) {
+  const isPlaying = card.dataset.playing === 'true';
+  const indicator = card.querySelector('.feed-pause-indicator');
+
+  if (isPlaying) {
+    pauseFeedCard(card);
+    if (indicator) {
+      indicator.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>`;
+      indicator.classList.add('show');
+      setTimeout(() => indicator.classList.remove('show'), 700);
+    }
+  } else {
+    playFeedCard(card);
+    if (indicator) {
+      indicator.innerHTML = `<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`;
+      indicator.classList.add('show');
+      setTimeout(() => indicator.classList.remove('show'), 600);
+    }
+  }
+}
+
+// ── Global Sound Toggle ──────────────────────────────────────
+function toggleFeedMute() {
+  feedIsMuted = !feedIsMuted;
+
+  // Update all mute button icons in DOM
+  document.querySelectorAll('.feed-mute-btn').forEach(btn => {
+    btn.innerHTML = feedIsMuted ? iconVolumeMute() : iconVolume();
+    btn.setAttribute('aria-label', feedIsMuted ? 'Unmute' : 'Mute');
+  });
+
+  // Apply to currently active cards
+  document.querySelectorAll('#feed-scroll .feed-card').forEach(card => {
+    if (card.dataset.playing === 'true') {
+      const iframe = card.querySelector('.feed-yt-iframe');
+      if (iframe) {
+        sendYTCommand(iframe, feedIsMuted ? 'mute' : 'unMute');
+      }
+      const video = card.querySelector('video');
+      if (video) {
+        video.muted = feedIsMuted;
+      }
+    }
+  });
+}
+
+function sendYTCommand(iframe, func, args = '') {
+  try {
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(JSON.stringify({
+        event: 'command',
+        func: func,
+        args: args
+      }), '*');
+    }
+  } catch (e) {}
+}
+
 // ── Update like button display ───────────────────────────────
 function updateFeedLikeBtn(btn, liked, videoId, baseLikes) {
-  // baseLikes is passed on first render; fall back to data lookup on state-change events
   const base = (baseLikes !== undefined) ? baseLikes : (getVideo(videoId)?.likes || 0);
   const displayCount = formatCount(liked ? base + 1 : base);
   btn.classList.toggle('liked', liked);
@@ -228,19 +344,11 @@ function updateFeedFollowBtn(btn, following) {
   btn.textContent = following ? '✓ Following' : '+ Follow';
 }
 
-// ── Play/pause toggle ────────────────────────────────────────
-function toggleVideoPlayPause(video, card) {
-  const indicator = card.querySelector('.feed-pause-indicator');
-  if (video.paused) {
-    video.play().catch(() => {});
-    if (indicator) { indicator.classList.add('show'); setTimeout(() => indicator.classList.remove('show'), 600); }
-  } else {
-    video.pause();
-    if (indicator) { indicator.classList.add('show'); setTimeout(() => indicator.classList.remove('show'), 800); }
-  }
+// ── SVG helpers ──────────────────────────────────────────────
+function iconVolume() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
 }
 
-// ── SVG helpers ──────────────────────────────────────────────
-function iconPlay() {
-  return `<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28" style="fill:var(--color-primary);margin-left:3px"><polygon points="5,3 19,12 5,21"/></svg>`;
+function iconVolumeMute() {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
 }

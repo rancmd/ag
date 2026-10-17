@@ -195,9 +195,7 @@ function buildVideosTab(artist) {
             <span class="video-thumb-likes">♥ ${formatCount(v.likes)}</span>
           </div>
         </div>`;
-      card.addEventListener('click', () => {
-        window.open(`https://www.youtube.com/watch?v=${v.youtubeId}`, '_blank', 'noopener');
-      });
+      card.addEventListener('click', () => openVideoModal(v));
     } else {
       card.innerHTML = `
         <div class="video-thumb-local">
@@ -417,22 +415,39 @@ function openVideoModal(v) {
   const modal = document.createElement('div');
   modal.className = 'modal-video';
 
-  const video = document.createElement('video');
-  video.src = v.src;
-  video.controls = true;
-  video.autoplay = true;
-  video.playsInline = true;
-  video.setAttribute('playsinline', '');
-  video.style.width = '100%';
-  video.style.aspectRatio = '9/16';
-  modal.appendChild(video);
+  let playerEl;
+  if (v.type === 'youtube' && v.youtubeId) {
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('title', 'YouTube video player');
+    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.src = `https://www.youtube.com/embed/${v.youtubeId}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+    iframe.style.width = '100%';
+    iframe.style.aspectRatio = '9/16';
+    iframe.style.border = 'none';
+    iframe.style.display = 'block';
+    playerEl = iframe;
+  } else {
+    const video = document.createElement('video');
+    video.src = v.src;
+    video.controls = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.style.width = '100%';
+    video.style.aspectRatio = '9/16';
+    video.style.display = 'block';
+    playerEl = video;
+  }
+  modal.appendChild(playerEl);
 
   const closeBtn = document.createElement('button');
   closeBtn.className = 'modal-close';
   closeBtn.innerHTML = '✕';
   closeBtn.setAttribute('aria-label', 'Close video');
   closeBtn.addEventListener('click', () => {
-    video.pause();
+    if (playerEl.pause) playerEl.pause();
     overlay.classList.add('closing');
     setTimeout(() => overlay.remove(), 200);
   });
@@ -441,7 +456,7 @@ function openVideoModal(v) {
   overlay.appendChild(modal);
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) {
-      video.pause();
+      if (playerEl.pause) playerEl.pause();
       overlay.classList.add('closing');
       setTimeout(() => overlay.remove(), 200);
     }

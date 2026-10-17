@@ -75,3 +75,25 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
 
 // ── Start the router ─────────────────────────────────────────
 router.start();
+
+// ── Excel Database Live Integration ──────────────────────────
+// When artgem_database.xlsx is loaded, refresh current view seamlessly
+document.addEventListener('artgem:dataloaded', () => {
+  const raw = window.location.hash.slice(1) || 'feed';
+  const path = raw.replace(/^\//, '');
+  if (path === 'feed' || path === '') {
+    renderFeed();
+  } else if (path === 'search') {
+    renderSearch();
+  } else if (path === 'following') {
+    renderFollowing();
+  } else if (path.startsWith('artist/')) {
+    const id = path.split('/')[1];
+    renderProfile(id);
+  }
+});
+
+// Automatically sync live with Google Sheets, falling back to local Excel/built-in data
+if (typeof initDatabase === 'function') {
+  initDatabase();
+}
