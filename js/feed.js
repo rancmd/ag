@@ -10,16 +10,6 @@ function renderFeed() {
   const page = document.getElementById('page-feed');
   page.innerHTML = '';
 
-  // ── Feed header (logo overlay) ──────────────────────────
-  const header = document.createElement('div');
-  header.className = 'feed-header';
-  header.innerHTML = `
-    <div class="feed-logo">
-      ${logoSVG(28, '#fff')}
-      <span class="feed-logo-text">ART GEM</span>
-    </div>`;
-  page.appendChild(header);
-
   // ── Feed scroll container ───────────────────────────────
   const feed = document.createElement('div');
   feed.className = 'feed';
@@ -228,6 +218,7 @@ function playFeedCard(card) {
       iframe = document.createElement('iframe');
       iframe.className = 'feed-yt-iframe';
       iframe.setAttribute('title', 'YouTube video player');
+      iframe.setAttribute('frameborder', '0');
       iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
       iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
       iframe.setAttribute('allowfullscreen', '');

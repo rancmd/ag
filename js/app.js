@@ -35,7 +35,12 @@ function showPage(pageId) {
     const el = document.getElementById(`page-${id}`);
     if (el) el.classList.toggle('active', id === pageId);
   });
-  // Update nav active state (profile has no nav button)
+  // Update top nav active state, theme, and visibility
+  const topNav = document.getElementById('top-nav');
+  if (topNav) {
+    topNav.style.display = pageId === 'profile' ? 'none' : 'flex';
+    topNav.classList.toggle('nav-on-light', pageId !== 'feed');
+  }
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.page === pageId);
   });

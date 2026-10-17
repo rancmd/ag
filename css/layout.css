@@ -92,70 +92,104 @@
   height: 18px;
 }
 
-/* ── Bottom Navigation ─────────────────────────────────────── */
-#bottom-nav {
-  display: flex;
-  align-items: stretch;
-  height: calc(var(--nav-height) + var(--safe-bottom));
-  padding-bottom: var(--safe-bottom);
-  background: var(--white);
-  border-top: 1px solid var(--color-border);
-  flex-shrink: 0;
-  position: relative;
+/* ── Top Navigation (Floating TikTok-style overlay) ────────── */
+#top-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
-}
-
-.nav-btn {
-  flex: 1;
+  padding-top: calc(var(--safe-top) + 12px);
+  padding-bottom: 12px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 4px;
-  color: var(--gray-400);
-  transition: color var(--duration);
-  position: relative;
+  pointer-events: none; /* Let video taps/swipes pass through around buttons */
+  background: transparent;
+  transition: background var(--duration), border-color var(--duration);
 }
 
-.nav-btn span {
-  font-size: var(--text-xs);
+.top-nav-tabs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  pointer-events: auto;
+}
+
+.top-nav-tabs .nav-btn {
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  font-family: var(--font-body);
+  font-size: 1.05rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  position: relative;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  transition: color var(--duration), transform var(--duration);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.nav-btn svg {
-  width: 22px;
-  height: 22px;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: stroke var(--duration);
+.top-nav-tabs .nav-btn:hover {
+  color: rgba(255, 255, 255, 0.95);
 }
 
-.nav-btn.active {
-  color: var(--color-primary);
+.top-nav-tabs .nav-btn:active {
+  transform: scale(0.95);
 }
 
-.nav-btn.active svg {
-  stroke: var(--color-primary);
+.top-nav-tabs .nav-btn.active {
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85);
 }
 
-/* Active indicator dot */
-.nav-btn.active::before {
+/* Subtle active indicator bar beneath active tab */
+.top-nav-tabs .nav-btn.active::after {
   content: '';
   position: absolute;
-  top: 6px;
-  width: 4px;
-  height: 4px;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
   border-radius: var(--radius-full);
-  background: var(--color-primary);
-  opacity: 0.5;
+  background: var(--color-accent); /* #EFCF20 gold */
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
-.nav-btn:active { opacity: 0.7; }
+/* ── Light Mode Top Nav (for Discover / Following pages) ─── */
+#top-nav.nav-on-light {
+  position: relative;
+  background: var(--white);
+  border-bottom: 1px solid var(--color-border);
+  pointer-events: auto;
+  padding-top: calc(var(--safe-top) + 6px);
+  padding-bottom: 8px;
+}
+
+#top-nav.nav-on-light .nav-btn {
+  color: var(--gray-500);
+  text-shadow: none;
+  font-size: 0.95rem;
+}
+
+#top-nav.nav-on-light .nav-btn:hover {
+  color: var(--color-text);
+}
+
+#top-nav.nav-on-light .nav-btn.active {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-shadow: none;
+}
+
+#top-nav.nav-on-light .nav-btn.active::after {
+  background: var(--color-primary);
+  box-shadow: none;
+}
 
 /* ── Scrollable page body ──────────────────────────────────── */
 .page-body {
